@@ -1,0 +1,60 @@
+USER
+- id INT PK
+- nume_utilizator STRING UNIQUE
+- parola STRING
+- id_firma INT FK(FIRMA)
+
+JUDET
+- id INT PK
+- denumire STRING
+
+COORDONATE
+- id
+- latitudine TABLE(NUMBER)
+- longitudine TABLE(NUMBER)
+
+LOCALITATE
+- id INT PK
+- id_judet INT FK(JUDET)
+- denumire STRING
+- id_coordonate FK(COORDONATE)
+
+PERSOANA_FIZICA
+- id INT PK
+- nume STRING
+- prenume STRING
+- gen STRING ('M' OR 'F')
+- cnp STRING UNIQUE
+- id_domiciliu INT FK(LOCALITATE)
+
+CAEN
+- cod STRING PK
+- activitate STRING
+
+FIRMA
+- id INT PK
+- denumire STRING
+- cui STRING
+- id_administrator INT FK(PERSOANA FIZICA)
+- id_sediu INT FK(LOCALITATE)
+
+FIRMA_CAEN
+- id_firma PK FK(FIRMA)
+- cod_caen PK FK(CAEN)
+
+CULTURA
+- id INT PK
+- denumire STRING
+
+PARCELA
+- id INT PK
+- id_proprietar INT FK(USER)
+- id_coordonate FK(COORDONATE)
+- nr_parcela INT
+- id_cultura INT FK(CULTURA)
+- suprafata DOUBLE
+- ultima_actualizare DATE
+
+(TRIGGER CARE ACTUALIZEAZA DATA ULTIMEI ACTUALIZARI)
+(TRIGGER CARE CALCULEAZA SUPRAFATA PARCELEI UTILIZAND O FUNCTIE)
+(FUNCTIE CARE VERIFICA LOCALITATEA IN CARE E PLASATA PARCELA, EROARE LA TOO MANY ROWS)
