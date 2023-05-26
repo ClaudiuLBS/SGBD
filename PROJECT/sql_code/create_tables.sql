@@ -40,7 +40,7 @@ CREATE TABLE persoana_fizica
     id_domiciliu INT,
     nume         VARCHAR2(100),
     prenume      VARCHAR2(100),
-    gen          VARCHAR2(1),
+    gen          CHAR,
     cnp          VARCHAR2(13),
 ----------------------------------
     CONSTRAINT fk_domiciliu
@@ -52,7 +52,6 @@ CREATE TABLE persoana_fizica
 ----------------------------------
     CONSTRAINT unique_cnp UNIQUE (cnp)
 );
-
 
 CREATE TABLE caen
 (
@@ -111,6 +110,7 @@ CREATE TABLE utilizator
     id_firma        INT,
     nume_utilizator VARCHAR2(100),
     parola          VARCHAR2(100),
+    data_inscriere DATE DEFAULT sysdate,
 ----------------------------------
     CONSTRAINT fk_firma_1
         FOREIGN KEY (id_firma)
@@ -118,7 +118,6 @@ CREATE TABLE utilizator
 ----------------------------------
     CONSTRAINT unique_username UNIQUE (nume_utilizator)
 );
-
 
 CREATE SEQUENCE seq_parcela
     START WITH 1

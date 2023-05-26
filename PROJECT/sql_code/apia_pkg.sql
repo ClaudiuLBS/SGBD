@@ -9,9 +9,20 @@ CREATE OR REPLACE PACKAGE apia_pkg AS
         v_id_cultura cultura.ID%TYPE,
         v_id_parcela parcela.NR_PARCELA%TYPE
     );
+
     FUNCTION localitate_parcela(
-        v_id_parcela NUMBER
+        v_id_parcela parcela.ID%TYPE
     ) RETURN VARCHAR2;
+
+    PROCEDURE suprafete_useri_5ani;
+
+    FUNCTION cel_mai_frecvent_caen(
+        v_nume_localitate localitate.DENUMIRE%TYPE
+    ) RETURN caen.COD%TYPE;
+
+    PROCEDURE suprafata_persoana_din_localitate(
+        v_nume_localitate localitate.DENUMIRE%TYPE
+    );
 END apia_pkg;
 
 CREATE OR REPLACE PACKAGE BODY apia_pkg AS
@@ -55,7 +66,7 @@ CREATE OR REPLACE PACKAGE BODY apia_pkg AS
     END;
 
     FUNCTION localitate_parcela(
-        v_id_parcela NUMBER
+        v_id_parcela parcela.ID%TYPE
     ) RETURN VARCHAR2 AS
         TYPE LOC_LIST IS TABLE OF VARCHAR2(100) INDEX BY PLS_INTEGER;
         v_nume_localitati LOC_LIST;
@@ -95,10 +106,140 @@ CREATE OR REPLACE PACKAGE BODY apia_pkg AS
         END IF;
 
         -- Aici lipesc toate localitatile in prima localitate
-        FOR i IN 2..v_nume_localitati.last loop
-            v_nume_localitati(1) := v_nume_localitati(1) || ', ' || v_nume_localitati(i);
-        END LOOP;
+        FOR i IN 2..v_nume_localitati.last
+            LOOP
+                v_nume_localitati(1) := v_nume_localitati(1) || ', ' || v_nume_localitati(i);
+            END LOOP;
 
         RETURN v_nume_localitati(1);
+    END;
+
+    PROCEDURE suprafete_useri_5ani IS
+        -- Toti userii mai vechi de 5 ani
+        CURSOR c_utilizatori IS
+            SELECT nume_utilizator
+            FROM utilizator
+            WHERE ADD_MONTHS(data_inscriere, 12 * 5) < SYSDATE;
+
+        -- id-ul culturii si suprafata totala pt fiecare user data parametru
+        CURSOR c_parcele_utilizator (username utilizator.NUME_UTILIZATOR%TYPE) IS
+            SELECT id_cultura, SUM(suprafata) AS suprafata
+            FROM parcela
+            WHERE id_proprietar = (SELECT id FROM utilizator WHERE nume_utilizator = username)
+            GROUP BY id_cultura;
+        v_nume_cultura cultura.DENUMIRE%TYPE;
+    BEGIN
+        dbms_output.put_line('_____________________');
+        FOR v_user IN c_utilizatori
+            LOOP
+                dbms_output.put_line(v_user.nume_utilizator || ': ');
+                FOR v_parcela IN c_parcele_utilizator(v_user.nume_utilizator)
+                    LOOP
+                        SELECT denumire INTO v_nume_cultura FROM cultura WHERE id = v_parcela.id_cultura;
+                        dbms_output.put_line(TO_CHAR(v_parcela.suprafata) || ' hectare de ' || v_nume_cultura);
+                    END LOOP;
+                dbms_output.put_line('_____________________');
+            END LOOP;
+    END;
+
+    FUNCTION cel_mai_frecvent_caen(
+        v_nume_localitate localitate.DENUMIRE%TYPE
+    ) RETURN caen.COD%TYPE AS
+        -- codul si frecventa maxima
+        v_cod           caen.COD%TYPE;
+        v_max           NUMBER;
+
+        -- codul si a doua frecventa maxima
+        v_second_max    NUMBER := 0;
+        v_second_code   caen.COD%TYPE;
+
+        -- numarul localitatilor cu denumirea respectiva
+        v_nr_localitati NUMBER := 0;
+
+        -- codurile caen si frecventa lor in firmele din localitate data ca parametru
+        CURSOR c_coduri IS
+            SELECT fc.cod_caen, COUNT(fc.cod_caen) AS frecventa
+            FROM firma f
+                     JOIN firma_caen fc ON f.id = fc.id_firma
+            WHERE f.id_sediu = (SELECT l.id FROM localitate l WHERE LOWER(l.denumire) = LOWER(v_nume_localitate))
+            GROUP BY fc.cod_caen
+            ORDER BY COUNT(fc.cod_caen) DESC;
+
+        localitate_inexistenta EXCEPTION;
+        prea_multe_localitati EXCEPTION;
+        localitatea_fara_firme EXCEPTION;
+        prea_multe_coduri_caen EXCEPTION;
+    BEGIN
+        SELECT COUNT(*)
+        INTO v_nr_localitati
+        FROM localitate
+        WHERE LOWER(denumire) = LOWER(v_nume_localitate);
+
+        IF v_nr_localitati = 0 THEN
+            RAISE localitate_inexistenta;
+        ELSIF v_nr_localitati > 1 THEN
+            RAISE prea_multe_localitati;
+        END IF;
+
+        OPEN c_coduri;
+        FETCH c_coduri INTO v_cod, v_max;
+
+        -- daca nu exista niciun cod inseamna ca nu exista firme
+        IF v_cod IS NULL THEN
+            RAISE localitatea_fara_firme;
+        END IF;
+
+        -- daca exista mai mult de un cod
+        IF NOT c_coduri%NOTFOUND THEN
+            FETCH c_coduri INTO v_second_code, v_second_max;
+        END IF;
+        CLOSE c_coduri;
+
+        -- daca primele 2 coduri sunt la fel de frecvente
+        IF v_second_max = v_max THEN
+            RAISE prea_multe_coduri_caen;
+        END IF;
+
+        RETURN v_cod;
+    EXCEPTION
+        WHEN localitatea_fara_firme THEN
+            RAISE_APPLICATION_ERROR(-20000, 'Nu exista firme in localitatea specificata.');
+        WHEN localitate_inexistenta THEN
+            RAISE_APPLICATION_ERROR(-20001, 'Localitatea specificata nu exista.');
+        WHEN prea_multe_localitati THEN
+            RAISE_APPLICATION_ERROR(-20002, 'Prea multe localitati cu numele specificat.');
+        WHEN prea_multe_coduri_caen THEN
+            RAISE_APPLICATION_ERROR(-20003, 'Exista mai mult de un cod caen cu frecventa ' || v_max || '.');
+    END;
+
+    PROCEDURE suprafata_persoana_din_localitate(
+        v_nume_localitate localitate.DENUMIRE%TYPE
+    ) IS
+        v_suprafata NUMBER;
+    BEGIN
+        -- calculam suprafata detinuta de firma persoanei fizice din localitatea specificata
+        SELECT SUM(p.suprafata)
+        INTO v_suprafata
+        FROM utilizator u
+                 JOIN parcela p ON u.id = p.id_proprietar
+                 JOIN firma f ON f.id = u.id_firma
+                 JOIN persoana_fizica pf ON pf.id = f.id_administrator
+                 JOIN localitate l ON pf.id_domiciliu = l.id
+        WHERE LOWER(l.denumire) = LOWER(v_nume_localitate)
+        GROUP BY u.nume_utilizator;
+
+        IF v_suprafata >= 50 then
+            dbms_output.PUT_LINE('Suprafata este mai mare de 50 hectare');
+        ELSE
+            dbms_output.PUT_LINE('Suprafata este mai mica de 50 hectare');
+        END IF;
+
+    EXCEPTION
+        WHEN too_many_rows THEN
+            RAISE_APPLICATION_ERROR(-20004, 'Prea multe persoane fizice cu domiciliu in ' || v_nume_localitate);
+        WHEN no_data_found THEN
+            RAISE_APPLICATION_ERROR(-20005, 'Nu exista nicio persoana fizica cu domiciliu in ' || v_nume_localitate);
+        WHEN OTHERS THEN
+            RAISE_APPLICATION_ERROR(SQLCODE, SQLERRM);
     END;
 END apia_pkg;
