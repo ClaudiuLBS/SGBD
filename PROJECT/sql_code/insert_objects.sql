@@ -93,7 +93,6 @@ VALUES (7,
 INSERT INTO localitate (id, id_judet, id_coordonate, denumire)
 VALUES (7, 1, 7, 'TOFLEA');
 
-
 --------------------- PERSOANE FIZICE ---------------------
 
 INSERT INTO persoana_fizica (id, id_domiciliu, nume, prenume, gen, cnp)
@@ -306,6 +305,7 @@ VALUES (18,
     num_list(46.04370044785122, 46.04554068857237, 46.04553020242665, 46.04347293790054, 46.04370044785122)
 );
 
+-- aici am folosit o functie de inserare care calculeaza automat suprafata parcelelor
 BEGIN
     apia_pkg.creare_parcela(2, 8, 201, 1);
     apia_pkg.creare_parcela(2, 11, 108, 2);
