@@ -88,15 +88,19 @@ BEGIN
         ultima_actualizare = SYSDATE
     WHERE id = v_id_parcela;
 END;
-COMMIT;
+
+SELECT *
+FROM parcela WHERE id = 25;
 
 UPDATE parcela
 SET nr_parcela = 4
 WHERE id = 25;
-SELECT *
-FROM parcela;
 
--- 12. Trigger de tip LDD: Eroare cand alt user inafara de ADMIN incearca sa modifice tabele
+SELECT *
+FROM parcela WHERE id = 25;
+
+
+-- 12. Trigger de tip LDD: Eroare cand alt user in afara de ADMIN incearca sa modifice tabele
 CREATE OR REPLACE TRIGGER modificare_tabele
     AFTER DROP OR ALTER
     ON SCHEMA
