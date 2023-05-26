@@ -24,19 +24,19 @@ CREATE OR REPLACE PACKAGE BODY apia_pkg AS
         conv_factor NUMBER := 93;
     BEGIN
         SELECT latitudine, longitudine INTO v_lat, v_long FROM coordonate WHERE id = v_id_coordonate;
---      Aplicam formula Shoelace
+        -- Aplicam formula Shoelace
         FOR i IN v_lat.first..(v_lat.last - 1)
             LOOP
                 v_suprafata := v_suprafata + (v_long(i) + v_long(i + 1)) * (v_lat(i + 1) - v_lat(i));
             END LOOP;
 
---      Aici avem suprafata in grade la patrat
+        -- Aici avem suprafata in grade la patrat
         v_suprafata := ABS(v_suprafata) / 2;
 
---      Facem conversie in km2
+        -- Facem conversie in km2
         v_suprafata := v_suprafata * conv_factor * conv_factor;
 
---      Inmultim cu 100 sa obtine hectare
+        -- Inmultim cu 100 sa obtine hectare
         v_suprafata := v_suprafata * 100;
         RETURN ROUND(v_suprafata, 2);
     END;
@@ -57,20 +57,21 @@ CREATE OR REPLACE PACKAGE BODY apia_pkg AS
     FUNCTION localitate_parcela(
         v_id_parcela NUMBER
     ) RETURN VARCHAR2 AS
-        TYPE LOC_LIST IS VARRAY(10) OF VARCHAR2(100);
-        v_nume_localitati LOC_LIST := loc_list();
+        TYPE LOC_LIST IS TABLE OF VARCHAR2(100) INDEX BY PLS_INTEGER;
+        v_nume_localitati LOC_LIST;
         v_lat_parcela     NUM_LIST;
         v_long_parcela    NUM_LIST;
         v_lat_localitate  NUM_LIST;
         v_long_localitate NUM_LIST;
+        v_idx             NUMBER := 0;
     BEGIN
-        dbms_output.put_line(v_id_parcela);
         -- Salvam coordonatele parcelei
         SELECT c.latitudine, c.longitudine
         INTO v_lat_parcela, v_long_parcela
         FROM parcela p
                  JOIN coordonate c ON c.id = p.id_coordonate
         WHERE p.id = v_id_parcela;
+        -- Pentru fiecra localitate
         FOR l IN (SELECT * FROM localitate)
             LOOP
                 -- Salvam coordonatele localitatii
@@ -78,18 +79,26 @@ CREATE OR REPLACE PACKAGE BODY apia_pkg AS
                 INTO v_lat_localitate, v_long_localitate
                 FROM coordonate c
                 WHERE c.id = l.id;
+                -- Daca se intersecteaza cu parcela atunci o salvam
                 IF geo_apia_pkg.intersectie_poligoane(
                            v_lat_parcela, v_long_parcela,
                            v_lat_localitate, v_long_localitate
                        ) = 1 THEN
---                     v_nume_localitati.extend;
---                     v_nume_localitati(v_nume_localitati.last) := l.denumire;
-                    dbms_output.put_line(l.denumire);
+                    v_idx := v_idx + 1;
+                    v_nume_localitati(v_idx) := l.denumire;
                 END IF;
             END LOOP;
-        IF v_nume_localitati.count > 0 THEN
-            RETURN v_nume_localitati(0);
+
+        -- Daca nu am gasit nicio localitate
+        IF v_nume_localitati.count = 0 THEN
+            RETURN 'FARA LOCALITATE';
         END IF;
-        RETURN 'nothing';
+
+        -- Aici lipesc toate localitatile in prima localitate
+        FOR i IN 2..v_nume_localitati.last loop
+            v_nume_localitati(1) := v_nume_localitati(1) || ', ' || v_nume_localitati(i);
+        END LOOP;
+
+        RETURN v_nume_localitati(1);
     END;
 END apia_pkg;

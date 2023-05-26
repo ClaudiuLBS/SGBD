@@ -51,14 +51,17 @@ CREATE OR REPLACE PACKAGE BODY geo_apia_pkg AS
         pos4       NUMBER;
         v_rezultat NUMBER := 1;
     BEGIN
+        -- Pozitiile fiecarui punct dintr-o dreapta fata de cealalta dreapta
         pos1 := geo_apia_pkg.test_orientare(x_start_1, y_start_1, x_end_1, y_end_1, x_start_2, y_start_2);
         pos2 := geo_apia_pkg.test_orientare(x_start_1, y_start_1, x_end_1, y_end_1, x_end_2, y_end_2);
         pos3 := geo_apia_pkg.test_orientare(x_start_2, y_start_2, x_end_2, y_end_2, x_start_1, y_start_1);
         pos4 := geo_apia_pkg.test_orientare(x_start_2, y_start_2, x_end_2, y_end_2, x_end_1, y_end_1);
+        -- Testam daca sunt 2 puncte la stanga sau 2 la dreapta
         IF ((pos1 > 0 AND pos2 > 0) OR (pos1 < 0 AND pos2 < 0)) OR
            ((pos3 > 0 AND pos4 > 0) OR (pos3 < 0 AND pos4 < 0)) THEN
             v_rezultat := 0;
         END IF;
+
         RETURN v_rezultat;
     END;
 
@@ -70,7 +73,7 @@ CREATE OR REPLACE PACKAGE BODY geo_apia_pkg AS
         intersectii      NUMBER := 0;
         se_intersecteaza NUMBER;
     BEGIN
-        --      numaram intersectiile dintre laturile poligonului si linia dusa din punct catre referinta
+        -- Numaram intersectiile dintre laturile poligonului si linia dusa din punct catre referinta
         FOR i IN x_poligon.first..(x_poligon.last - 1)
             LOOP
                 se_intersecteaza := geo_apia_pkg.intersectie_linii(
@@ -81,7 +84,7 @@ CREATE OR REPLACE PACKAGE BODY geo_apia_pkg AS
                     intersectii := intersectii + 1;
                 END IF;
             END LOOP;
---      daca e nr par, nu e inauntru, si daca e impar, e inauntru
+        -- Daca e nr par, nu e inauntru, si daca e impar, e inauntru
         IF MOD(intersectii, 2) = 0 THEN
             RETURN 0;
         ELSE
@@ -96,14 +99,14 @@ CREATE OR REPLACE PACKAGE BODY geo_apia_pkg AS
     BEGIN
         FOR i IN x_poligon_1.first..x_poligon_1.last
             LOOP
---              Daca unul dintre punctele primului poligon se afla pe al doilea poligon
+                -- Daca unul dintre punctele primului poligon se afla pe al doilea poligon
                 IF geo_apia_pkg.punct_in_poligon(x_poligon_2, y_poligon_2, x_poligon_1(i), y_poligon_1(i)) = 1 THEN
                     RETURN 1;
                 END IF;
             END LOOP;
         FOR i IN x_poligon_2.first..x_poligon_2.last
             LOOP
---              Daca unul dintre punctele celui de-al doilea poligon se afla pe primul poligon
+                -- Daca unul dintre punctele celui de-al doilea poligon se afla pe primul poligon
                 IF geo_apia_pkg.punct_in_poligon(x_poligon_1, y_poligon_1, x_poligon_2(i), y_poligon_2(i)) = 1 THEN
                     RETURN 1;
                 END IF;

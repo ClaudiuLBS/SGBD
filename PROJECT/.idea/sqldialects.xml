@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SqlDialectMappings">
+    <file url="file://$PROJECT_DIR$/sql_code/apia_pkg.sql" dialect="OracleSqlPlus" />
+    <file url="file://$PROJECT_DIR$/sql_code/cerinte.sql" dialect="OracleSqlPlus" />
+    <file url="file://$PROJECT_DIR$/sql_code/geo_apia_pkg.sql" dialect="OracleSqlPlus" />
+    <file url="PROJECT" dialect="OracleSqlPlus" />
+  </component>
+</project>
