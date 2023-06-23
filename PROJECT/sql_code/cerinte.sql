@@ -62,8 +62,9 @@ BEGIN
         RAISE_APPLICATION_ERROR(-20001, 'Nu se pot adauga utilizatori intre 21:00 si 07:00.');
     END IF;
 END;
+
 INSERT INTO utilizator (id, id_firma, nume_utilizator, parola)
-VALUES (6, 4, 'test', 'test');
+VALUES (9, 4, 'test', 'test');
 
 -- 11. Trigger de tip LMD la nivel de comandă: Modifica suprafta si ultima_actualizare a parcelei
 CREATE OR REPLACE TRIGGER actualizare_parcela
@@ -93,7 +94,7 @@ SELECT *
 FROM parcela WHERE id = 25;
 
 UPDATE parcela
-SET nr_parcela = 4
+SET nr_parcela = 6
 WHERE id = 25;
 
 SELECT *
